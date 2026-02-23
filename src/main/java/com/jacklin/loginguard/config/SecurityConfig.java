@@ -1,27 +1,41 @@
 package com.jacklin.loginguard.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
-    // 1. 制造一个 BCrypt 加密工具箱，交给 Spring 管理
+    // === 新增：把刚才写的保安大队长叫过来 ===
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthFilter;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // 2. 配置保安队长的拦截规则
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // 关闭 CSRF 防护（为了方便用 Postman 测试），并允许所有的请求直接通过（因为登录逻辑是我们自己写的）
         http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                // === 修改 1：重新制定放行规则 ===
+                .authorizeHttpRequests(auth -> auth
+                        // 登录和注册接口，所有人大摇大摆直接进
+                        .requestMatchers("/auth/login", "/auth/register").permitAll()
+                        // 其他任何接口（比如查日志的 /auth/logs），必须买票验证！
+                        .anyRequest().authenticated()
+                )
+                // === 修改 2：告诉系统我们用 JWT，不保存传统的 Session 状态 ===
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // === 修改 3：把我们的保安，安排在 Spring 默认的安检门之前 ===
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
