@@ -3,6 +3,7 @@ package com.jacklin.loginguard.service;
 import com.jacklin.loginguard.entity.LoginAttempt;
 import com.jacklin.loginguard.entity.User;
 import com.jacklin.loginguard.dto.LoginRequest;
+import com.jacklin.loginguard.exception.AuthException;
 import com.jacklin.loginguard.repository.LoginAttemptRepository;
 import com.jacklin.loginguard.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ public class UserService {
 
         if (failCount >= 3) {
             System.out.println("🚨 [安全拦截] IP: " + ip + " 尝试次数过多，已封锁！");
-            return null; // 直接拒绝，连数据库都不用查
+            throw new AuthException("账户已被安全锁定，请稍后再试！");
         }
         // ==========================
 
@@ -57,9 +58,10 @@ public class UserService {
         loginAttemptRepository.save(attempt);
 
         if (!loginSuccess) {
-            return null;
+            // === 替换掉 return null; 改为抛出异常 ===
+            throw new AuthException("用户名或密码错误！");
         }
 
-        return user;
+        return user; // 成功就正常返回
     }
 }

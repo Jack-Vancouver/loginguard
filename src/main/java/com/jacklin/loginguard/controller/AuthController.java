@@ -7,6 +7,7 @@ import com.jacklin.loginguard.repository.LoginAttemptRepository;
 import com.jacklin.loginguard.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,18 +30,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        // 1. 获取客户端的 IP 地址
+    public ResponseEntity<String> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ip = httpRequest.getRemoteAddr();
 
-        // 2. 调用 Service，传入 IP
+        // 调用 service 进行登录。如果失败，它会直接抛出异常被“急诊科”接走，下面的代码就不会执行了！
         User user = userService.login(request, ip);
 
-        if (user == null) {
-            return "Login Failed! Wrong username or password.";
-        }
-
-        return "Login Success! Welcome " + user.getUsername();
+        // 如果能走到这里，说明一定成功了
+        return ResponseEntity.ok("Login Success! Welcome " + user.getUsername());
     }
 
     // 访问地址：GET http://localhost:10000/auth/logs
